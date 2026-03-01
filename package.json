@@ -1,5 +1,5 @@
 {
-  "name": "captcha",
+  "name": "@bhaskardey772/captcha",
   "version": "1.0.0",
   "description": "SVG CAPTCHA generator with HMAC token verification. Zero runtime dependencies.",
   "main": "./src/index.js",
