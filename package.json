@@ -1,5 +1,5 @@
 {
-  "name": "capta",
+  "name": "captcha",
   "version": "1.0.0",
   "description": "SVG CAPTCHA generator with HMAC token verification. Zero runtime dependencies.",
   "main": "./src/index.js",
@@ -33,12 +33,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bhaskar/capta.git"
+    "url": "git+https://github.com/BhaskarDey772/captcha.git"
   },
   "bugs": {
-    "url": "https://github.com/bhaskar/capta/issues"
+    "url": "https://github.com/BhaskarDey772/captcha/issues"
   },
-  "homepage": "https://github.com/bhaskar/capta#readme",
+  "homepage": "https://github.com/BhaskarDey772/captcha#readme",
   "dependencies": {},
   "devDependencies": {},
   "scripts": {

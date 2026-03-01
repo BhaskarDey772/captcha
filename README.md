@@ -1,10 +1,10 @@
-# capta
+# captcha
 
 > SVG CAPTCHA generator with HMAC token verification — **zero runtime dependencies.**
 
-[![npm version](https://img.shields.io/npm/v/capta.svg)](https://www.npmjs.com/package/capta)
-[![license](https://img.shields.io/npm/l/capta.svg)](LICENSE)
-[![node](https://img.shields.io/node/v/capta.svg)](package.json)
+[![npm version](https://img.shields.io/npm/v/captcha.svg)](https://www.npmjs.com/package/captcha)
+[![license](https://img.shields.io/npm/l/captcha.svg)](LICENSE)
+[![node](https://img.shields.io/node/v/captcha.svg)](package.json)
 
 Generates distorted SVG text CAPTCHAs on your **Node.js server** and verifies answers using stateless HMAC-signed tokens. No sessions, no databases, no native addons.
 
@@ -15,7 +15,7 @@ Generates distorted SVG text CAPTCHAs on your **Node.js server** and verifies an
 ## Install
 
 ```bash
-npm install capta
+npm install captcha
 ```
 
 ---
@@ -29,7 +29,7 @@ This is the most common setup: a React frontend protected by an Express backend.
 ```js
 // server.js
 const express = require('express');
-const capta   = require('capta');
+const capta   = require('captcha');
 
 const app = express();
 app.use(express.json());
@@ -152,7 +152,7 @@ export function RegisterForm() {
 ## Quick start (minimal)
 
 ```js
-const capta = require('capta');
+const capta = require('captcha');
 
 // Generate
 const { svg, token } = capta.create({ secret: process.env.CAPTCHA_SECRET });
