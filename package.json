@@ -1,0 +1,48 @@
+{
+  "name": "capta",
+  "version": "1.0.0",
+  "description": "SVG CAPTCHA generator with HMAC token verification. Zero runtime dependencies.",
+  "main": "./src/index.js",
+  "exports": {
+    ".": {
+      "require": "./src/index.js",
+      "default": "./src/index.js"
+    }
+  },
+  "types": "./types/index.d.ts",
+  "files": [
+    "src/",
+    "types/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "keywords": [
+    "captcha",
+    "svg",
+    "hmac",
+    "verification",
+    "token",
+    "security",
+    "challenge",
+    "bot-protection",
+    "zero-dependency"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bhaskar/capta.git"
+  },
+  "bugs": {
+    "url": "https://github.com/bhaskar/capta/issues"
+  },
+  "homepage": "https://github.com/bhaskar/capta#readme",
+  "dependencies": {},
+  "devDependencies": {},
+  "scripts": {
+    "test": "node test/generate.test.js && node test/svg.test.js && node test/token.test.js",
+    "prepublishOnly": "npm test"
+  }
+}
