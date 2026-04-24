@@ -1,0 +1,50 @@
+{
+  "name": "@bhaskardey772/captcha",
+  "version": "1.0.0",
+  "description": "SVG CAPTCHA generator with HMAC token verification. Zero runtime dependencies.",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": {
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "keywords": [
+    "captcha",
+    "svg",
+    "hmac",
+    "verification",
+    "token",
+    "security",
+    "challenge",
+    "bot-protection",
+    "zero-dependency"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/BhaskarDey772/captcha.git"
+  },
+  "bugs": {
+    "url": "https://github.com/BhaskarDey772/captcha/issues"
+  },
+  "homepage": "https://github.com/BhaskarDey772/captcha#readme",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  }
+}
