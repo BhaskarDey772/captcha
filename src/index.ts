@@ -1,19 +1,19 @@
 import { generateText } from './generate';
-import { buildSvg, SvgOptions, DistortionLevel } from './svg';
+import { buildCanvas, CanvasOptions, DistortionLevel } from './canvas';
 import { createToken, verify as verifyToken, VerifyResult } from './token';
 
 export { DistortionLevel };
 
-export interface CaptaOptions extends SvgOptions {
-  secret?: string;
-  length?: number;
-  ttl?: number;
+export interface CaptaOptions extends CanvasOptions {
+  secret?:  string;
+  length?:  number;
+  ttl?:     number;
   charset?: string;
 }
 
 export interface CaptaResult {
-  svg: string;
-  token: string;
+  dataUrl: string;
+  token:   string;
 }
 
 export interface BoundCapta {
@@ -24,10 +24,10 @@ export interface BoundCapta {
 export { VerifyResult };
 
 export function create(options: CaptaOptions & { secret: string }): CaptaResult {
-  const text  = generateText(options.length, options.charset);
-  const svg   = buildSvg(text, options);
-  const token = createToken(text, options.secret, { ttl: options.ttl });
-  return { svg, token };
+  const text   = generateText(options.length, options.charset);
+  const dataUrl = buildCanvas(text, options);
+  const token   = createToken(text, options.secret, { ttl: options.ttl });
+  return { dataUrl, token };
 }
 
 export function verify(token: string, answer: string, secret: string): VerifyResult {
@@ -42,11 +42,11 @@ export function configure(options: CaptaOptions & { secret: string }): BoundCapt
   };
 }
 
-export function createSvg(text: string, options?: Omit<CaptaOptions, 'secret' | 'ttl' | 'length'>): string {
+export function createCanvasImage(text: string, options?: Omit<CaptaOptions, 'secret' | 'ttl' | 'length'>): string {
   if (!text || typeof text !== 'string') {
     throw new TypeError('text must be a non-empty string');
   }
-  return buildSvg(text, options);
+  return buildCanvas(text, options);
 }
 
 export { createToken };

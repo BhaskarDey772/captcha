@@ -1,14 +1,14 @@
 # captcha
 
-> SVG CAPTCHA generator with HMAC token verification — **zero runtime dependencies.**
+> Canvas CAPTCHA generator with HMAC token verification.
 
 [![npm version](https://img.shields.io/npm/v/%40bhaskardey772%2Fcaptcha.svg)](https://www.npmjs.com/package/@bhaskardey772/captcha)
 [![license](https://img.shields.io/npm/l/%40bhaskardey772%2Fcaptcha.svg)](LICENSE)
 [![node](https://img.shields.io/node/v/%40bhaskardey772%2Fcaptcha.svg)](package.json)
 
-Generates distorted SVG text CAPTCHAs on your **Node.js server** and verifies answers using stateless HMAC-signed tokens. No sessions, no databases, no native addons. Written in TypeScript — types included.
+Generates distorted CAPTCHA images using the **Canvas 2D API** (via `node-canvas`) and verifies answers using stateless HMAC-signed tokens. No sessions, no databases. Written in TypeScript — types included.
 
-**Architecture:** `capta` runs entirely on the backend. Your server generates `{ svg, token }` and sends both to the browser. The browser displays the SVG and submits the typed answer + token back. Your server verifies — done.
+**Architecture:** runs entirely on the backend. Your server generates `{ dataUrl, token }` and sends both to the browser. The browser draws the image onto a `<canvas>` and submits the typed answer + token back. Your server verifies — done.
 
 ---
 
@@ -18,31 +18,51 @@ Generates distorted SVG text CAPTCHAs on your **Node.js server** and verifies an
 npm install @bhaskardey772/captcha
 ```
 
+> Requires the `node-canvas` native addon. Make sure your system has the [canvas build prerequisites](https://github.com/Automattic/node-canvas#compiling) (Cairo, Pango, etc.) installed.
+
+---
+
+## Quick start
+
+```js
+// CommonJS
+const capta = require('@bhaskardey772/captcha');
+
+// ESM / TypeScript
+import * as capta from '@bhaskardey772/captcha';
+
+// Generate
+const { dataUrl, token } = capta.create({ secret: process.env.CAPTCHA_SECRET });
+// → dataUrl: 'data:image/png;base64,...'  send to browser
+// → token:   'eyJ0Ij...'                  send as hidden field or JSON
+
+// Verify (on form submit) — case-sensitive
+const result = capta.verify(token, userTypedAnswer, process.env.CAPTCHA_SECRET);
+// → { valid: true,  reason: 'ok' }
+// → { valid: false, reason: 'wrong_answer' | 'expired' | 'sig_mismatch' | 'malformed' }
+```
+
 ---
 
 ## React + Express integration
 
-This is the most common setup: a React frontend protected by an Express backend.
-
 ### 1. Backend (Express)
 
 ```js
-// server.js
 const express = require('express');
 const capta   = require('@bhaskardey772/captcha');
 
 const app = express();
 app.use(express.json());
 
-// Create once at startup — bakes in your secret and defaults
 const captcha = capta.configure({
-  secret:     process.env.CAPTCHA_SECRET, // keep server-side only
-  ttl:        300,        // 5-minute expiry
+  secret:     process.env.CAPTCHA_SECRET,
+  ttl:        300,
   length:     5,
   distortion: 'medium',
 });
 
-// GET /api/captcha — send fresh SVG + token to the browser
+// GET /api/captcha — send fresh PNG dataUrl + token
 app.get('/api/captcha', (req, res) => {
   res.json(captcha.create());
 });
@@ -57,7 +77,6 @@ app.post('/api/register', (req, res) => {
     return res.status(422).json({ error: 'CAPTCHA failed', reason: result.reason });
   }
 
-  // Bot check passed — create the user
   res.json({ success: true });
 });
 ```
@@ -65,31 +84,32 @@ app.post('/api/register', (req, res) => {
 ### 2. Frontend — `<CaptchaField>` component (React)
 
 ```jsx
-// CaptchaField.jsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 export function CaptchaField({ onChange }) {
-  const [svg,   setSvg]   = useState('');
   const [token, setToken] = useState('');
+  const canvasRef = useRef(null);
 
   const refresh = useCallback(async () => {
-    const data = await fetch('/api/captcha').then(r => r.json());
-    setSvg(data.svg);
-    setToken(data.token);
-    onChange({ token: data.token, answer: '' });
+    const { dataUrl, token } = await fetch('/api/captcha').then(r => r.json());
+    setToken(token);
+    onChange({ token, answer: '' });
+
+    const img = new Image();
+    img.onload = () => {
+      const ctx = canvasRef.current.getContext('2d');
+      ctx.clearRect(0, 0, 220, 70);
+      ctx.drawImage(img, 0, 0);
+    };
+    img.src = dataUrl;
   }, [onChange]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      {/* Render the SVG inline — no <img> or data URL needed */}
-      <div dangerouslySetInnerHTML={{ __html: svg }} />
-
-      <button type="button" onClick={refresh} aria-label="Refresh CAPTCHA">
-        ↺
-      </button>
-
+      <canvas ref={canvasRef} width={220} height={70} style={{ borderRadius: 4 }} />
+      <button type="button" onClick={refresh} aria-label="Refresh CAPTCHA">↺</button>
       <input
         type="text"
         placeholder="Type the characters above"
@@ -104,7 +124,6 @@ export function CaptchaField({ onChange }) {
 ### 3. Wiring it into a form
 
 ```jsx
-// RegisterForm.jsx
 import { useState } from 'react';
 import { CaptchaField } from './CaptchaField';
 
@@ -137,10 +156,8 @@ export function RegisterForm() {
     <form onSubmit={handleSubmit}>
       <input name="email"    type="email"    placeholder="Email"    required />
       <input name="password" type="password" placeholder="Password" required />
-
       <CaptchaField onChange={setCaptcha} />
       {error && <p style={{ color: 'red' }}>{error}</p>}
-
       <button type="submit">Register</button>
     </form>
   );
@@ -149,52 +166,31 @@ export function RegisterForm() {
 
 ---
 
-## Quick start (minimal)
-
-```js
-// CommonJS
-const capta = require('@bhaskardey772/captcha');
-
-// ESM / TypeScript
-import * as capta from '@bhaskardey772/captcha';
-
-// Generate
-const { svg, token } = capta.create({ secret: process.env.CAPTCHA_SECRET });
-// → svg:   '<svg ...>...</svg>'  send to browser for display
-// → token: 'eyJ0Ij...'          send as hidden field or JSON
-
-// Verify (on form submit)
-const result = capta.verify(token, userTypedAnswer, process.env.CAPTCHA_SECRET);
-// → { valid: true,  reason: 'ok' }
-// → { valid: false, reason: 'wrong_answer' | 'expired' | 'sig_mismatch' | 'malformed' }
-```
-
----
-
 ## API
 
-### `capta.create(options)` → `{ svg, token }`
+### `capta.create(options)` → `{ dataUrl, token }`
 
-Generates random text, builds a distorted SVG, and returns a signed HMAC token.
+Generates random text, renders a distorted PNG via Canvas 2D, and returns a signed HMAC token.
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `secret` | `string` | **required** | HMAC signing key (server-side only) |
 | `length` | `number` | `6` | Number of characters |
 | `ttl` | `number` | `300` | Token expiry in seconds |
-| `width` | `number` | `220` | SVG width (px) |
-| `height` | `number` | `70` | SVG height (px) |
+| `width` | `number` | `220` | Canvas width (px) |
+| `height` | `number` | `70` | Canvas height (px) |
 | `fontSize` | `number` | `34` | Base font size (px) |
-| `background` | `string` | `'#f4f4f4'` | SVG background color |
+| `background` | `string` | `'#f4f4f4'` | Background colour |
 | `charset` | `string` | unambiguous alphanumeric | Characters to draw from |
-| `noise` | `boolean` | `true` | Add noise lines and dots |
+| `noise` | `boolean` | `true` | Add noise lines, ellipses, and dots |
 | `distortion` | `'low'\|'medium'\|'high'` | `'medium'` | Distortion intensity |
 
 ### `capta.verify(token, answer, secret)` → `{ valid, reason }`
 
 Verifies a token against the user's typed answer. **Stateless** — no session or database needed.
 
-Verification is **case-insensitive** and **trims whitespace** automatically.
+> **Verification is case-sensitive.** The answer must match exactly as displayed.
+> Leading/trailing whitespace is trimmed automatically.
 
 | `reason` | Meaning |
 |----------|---------|
@@ -202,7 +198,7 @@ Verification is **case-insensitive** and **trims whitespace** automatically.
 | `'wrong_answer'` | Signature valid but answer is incorrect |
 | `'expired'` | Token TTL has elapsed |
 | `'sig_mismatch'` | Token was tampered with or signed with a different secret |
-| `'malformed'` | Not a valid capta token |
+| `'malformed'` | Not a valid token |
 
 ### `capta.configure(options)` → `{ create, verify }`
 
@@ -211,22 +207,36 @@ Returns a reusable instance with `secret` and defaults baked in — avoids repea
 ```js
 const captcha = capta.configure({ secret: process.env.CAPTCHA_SECRET, ttl: 600 });
 
-const { svg, token } = captcha.create();                  // no secret needed here
-const result          = captcha.verify(token, userAnswer); // no secret needed here
+const { dataUrl, token } = captcha.create();
+const result             = captcha.verify(token, userAnswer);
 ```
 
-### `capta.createSvg(text, options)` → `string`
+### `capta.createCanvasImage(text, options)` → `string`
 
-Low-level: build an SVG from arbitrary text without creating a token. Useful when you store the answer yourself (session, Redis, etc.).
+Low-level: render a PNG dataUrl from arbitrary text without creating a token. Useful when you store the answer yourself (session, Redis, etc.).
 
 ```js
-const svg = capta.createSvg('AB3K7', { width: 220, height: 70 });
-req.session.captchaAnswer = 'ab3k7';
+const dataUrl = capta.createCanvasImage('AB3K7', { width: 220, height: 70 });
+req.session.captchaAnswer = 'AB3K7';
 ```
 
 ### `capta.createToken(text, secret, options)` → `string`
 
-Low-level: sign text into an HMAC token without generating an SVG.
+Low-level: sign text into an HMAC token without rendering an image.
+
+---
+
+## How distortion works
+
+Three independent layers:
+
+1. **Per-character geometry** — random `rotate` (±20°), `skewX` (±16°), vertical jitter (±16 px), font-size variation (80–110%), random font family and weight
+2. **Ghost layers** — each character is drawn 1–2 extra times at slight random offsets with low opacity, simulating SVG turbulence displacement
+3. **Structural noise** — wavy polyline strokes, random ellipses, and dot scatter rendered over the text
+
+**Token format:** `BASE64URL(JSON_PAYLOAD).BASE64URL(HMAC_SHA256)`
+
+The payload contains the normalized answer, expiry timestamp, and a random nonce. The HMAC signature is verified with `crypto.timingSafeEqual` before the payload is decoded, preventing timing attacks.
 
 ---
 
@@ -234,26 +244,12 @@ Low-level: sign text into an HMAC token without generating an SVG.
 
 | Attack vector | Protection |
 |---------------|-----------|
-| Simple form bots | Must visually solve the distorted SVG challenge |
+| Simple form bots | Must visually solve the distorted canvas challenge |
 | Automated token replay | Token expires after `ttl` seconds; combine with a Redis nonce denylist for strict one-time-use |
-| Token forgery | HMAC-SHA256 signed with a server-only secret — impossible to fake without the key |
-| Answer brute-force | Default 6-char charset = 36^6 ≈ 2.17 billion combinations; pair with rate-limiting for extra protection |
-| Token tampering | Payload verified with `crypto.timingSafeEqual` before decoding — any modification is detected |
-| OCR bots | Per-character rotation, skew, jitter + SVG turbulence filter + noise lines/dots break optical recognition |
-
----
-
-## How it works
-
-**SVG distortion** — three independent layers rendered by the browser:
-
-1. **Per-character transforms** — each character gets its own random `rotate` (±14°), `skewX` (±10°), vertical jitter (±12 px), and font-size variation (80–120%)
-2. **Per-character SVG filter** — `feTurbulence` + `feDisplacementMap` with a unique random `seed` per character; every CAPTCHA looks distinct
-3. **Structural noise** — wavy `<path>` lines and dot scatter `<circle>` elements overlaid on top of the text
-
-**Token format:** `BASE64URL(JSON_PAYLOAD).BASE64URL(HMAC_SHA256)`
-
-The payload contains the normalized answer, expiry timestamp, and a random nonce. The HMAC signature is verified with `crypto.timingSafeEqual` *before* the payload is decoded, preventing timing attacks.
+| Token forgery | HMAC-SHA256 signed with a server-only secret |
+| Answer brute-force | Default 5-char mixed-case charset = ~52^5 ≈ 380 million combinations; pair with rate-limiting |
+| Token tampering | Payload verified with `crypto.timingSafeEqual` — any modification is detected |
+| OCR bots | Per-character rotation, skew, jitter, ghost layers, and noise break optical recognition |
 
 ---
 
@@ -262,13 +258,11 @@ The payload contains the normalized answer, expiry timestamp, and a random nonce
 - Store `CAPTCHA_SECRET` in an environment variable — never hardcode it or expose it to the client
 - Generate a strong secret: `openssl rand -hex 32`
 - For strict one-time-use enforcement, maintain a short-lived Redis SET of used nonces (the `n` field in the decoded payload) matching the token `ttl`
-- The default charset excludes all visually ambiguous characters (0/O, 1/I/l, 5/S, 8/B, 2/Z, 6/G, 9/q, U/V, u/v) to avoid frustrating real users while keeping entropy high
-- `capta` does not provide rate-limiting — add that at the API layer (e.g., `express-rate-limit`)
+- The default charset excludes visually ambiguous characters (0/O, 1/I/l, 5/S, 8/B, 2/Z, 6/G, 9/q, U/V, u/v)
+- `capta` does not provide rate-limiting — add that at the API layer (e.g. `express-rate-limit`)
 
 ---
 
 ## License
 
 MIT
-# captcha
-# captcha

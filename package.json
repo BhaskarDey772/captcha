@@ -1,7 +1,7 @@
 {
   "name": "@bhaskardey772/captcha",
-  "version": "1.0.0",
-  "description": "SVG CAPTCHA generator with HMAC token verification. Zero runtime dependencies.",
+  "version": "1.2.0",
+  "description": "Canvas CAPTCHA generator with HMAC token verification.",
   "main": "./dist/index.js",
   "exports": {
     ".": {
@@ -38,7 +38,9 @@
     "url": "https://github.com/BhaskarDey772/captcha/issues"
   },
   "homepage": "https://github.com/BhaskarDey772/captcha#readme",
-  "dependencies": {},
+  "dependencies": {
+    "canvas": "^3.2.3"
+  },
   "devDependencies": {
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0"
